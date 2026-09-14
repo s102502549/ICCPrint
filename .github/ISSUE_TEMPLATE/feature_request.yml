@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an ICCPrint improvement
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What printing or color-management workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe what you would like ICCPrint to do.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Printer / workflow context
+      description: Optional printer, profile maker, file type, or workflow details.

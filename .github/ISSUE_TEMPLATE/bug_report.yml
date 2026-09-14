@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible ICCPrint problem
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not upload private documents or proprietary ICC profiles unless you have permission to share them.
+  - type: input
+    id: version
+    attributes:
+      label: ICCPrint version
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: input
+    id: printer
+    attributes:
+      label: Printer and driver version
+      placeholder: Epson L15160 / driver version ...
+  - type: dropdown
+    id: filetype
+    attributes:
+      label: Input type
+      options:
+        - PDF
+        - JPEG/PNG/BMP/WebP
+        - TIFF
+        - Office via LibreOffice
+        - Other
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: Tell us the smallest sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / error text
+    validations:
+      required: true

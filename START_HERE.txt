@@ -1,0 +1,18 @@
+ICCPrint
+========
+
+GitHub / source quick start:
+
+1. Windows 10/11 + 64-bit Python 3.12 or 3.13.
+2. Run install_and_run.bat.
+3. Select an RGB printer ICC/ICM profile.
+4. In the printer driver's own properties, disable extra color correction.
+5. Use the same paper/media/quality settings that were used to create the ICC profile.
+
+Documentation:
+- README.md
+- README_zh-TW.md
+- docs\INSTALL_WINDOWS.md
+- docs\COLOR_MANAGEMENT.md
+
+To build the Windows folder distribution, run build_exe.bat.

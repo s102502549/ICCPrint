@@ -1,0 +1,32 @@
+name: Build Windows artifact
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Create build environment
+        shell: powershell
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+      - name: Build with PyInstaller
+        shell: cmd
+        run: build_exe.bat /nopause
+      - name: Create zip
+        shell: powershell
+        run: Compress-Archive -Path dist\ICCPrint\* -DestinationPath ICCPrint-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ICCPrint-Windows
+          path: ICCPrint-Windows.zip
