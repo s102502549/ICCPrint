@@ -17,7 +17,7 @@ on:
       - "build_exe.bat"
       - ".github/workflows/build-windows.yml"
   push:
-    branches: [main]
+    branches: [main, "feat/**"]
 
 permissions:
   contents: read
