@@ -1,48 +1,49 @@
 # Color-management workflow
 
-ICCPrint is designed around application-managed printer color conversion.
+ICCPrint is application-managed RGB printer conversion. The driver must not perform a second color conversion; configure `No Color Adjustment` or the equivalent in its own UI and use the exact profiled print condition.
 
-## Output pipeline
+## Source interpretation
+
+Raster image ICC bytes are retained until conversion and validated against the image's source color space. Malformed profiles and incompatible image/profile combinations fail explicitly instead of silently falling back to sRGB. CMYK/Lab sources require a compatible embedded source profile; an untagged CMYK image is not safely described by an sRGB assumption. Untagged ordinary RGB/grayscale content uses the documented sRGB interpretation. Transparent content is composited on white with attention to its source color space.
+
+PDFs (and Office files after LibreOffice conversion) are rasterized by PDFium. ICCPrint treats PDFium's resulting RGB bitmap as sRGB. It does not preserve PDF vectors, output intents, separations or individual original object profiles through the printer conversion. This is not a CMYK/RIP or production prepress workflow.
+
+## Printer output
 
 ```text
-Source file
-  -> embedded source ICC, or sRGB fallback
-  -> selected rendering intent
-  -> optional Black Point Compensation
-  -> selected RGB printer ICC/ICM
-  -> Windows print dialog / printer driver
+Decode image / rasterize PDF
+  -> validate embedded source profile or apply explicit sRGB assumption
+  -> selected rendering intent + optional BPC
+  -> selected RGB printer output ICC/ICM
+  -> converted RGB page pixels
+  -> Windows driver with additional color correction disabled
   -> printer
 ```
 
-The printer driver should not perform a second color conversion. If the driver provides a setting such as `No Color Adjustment`, use it.
+The output profile must report RGB device color space and the ICC printer/output class (`prtr`). Renaming a monitor or sRGB profile does not make it a printer profile. ICCPrint checks output-intent support and conversion readiness before printing.
 
-## Rendering intents
+All selected pages are rendered and converted before printer submission begins. Resource limits reject oversized raster allocations rather than risking uncontrolled memory use. Temporary disk spooling separates conversion validation from sending pages to the driver.
 
-ICCPrint exposes all four standard ICC rendering intents supported by Pillow/LittleCMS:
+## Rendering intents and BPC
 
-- Perceptual
-- Relative Colorimetric
-- Saturation
-- Absolute Colorimetric
+All four standard ICC intents are available: Perceptual, Relative Colorimetric, Saturation and Absolute Colorimetric. Their effect depends on the actual profile's tables and supported transforms. New installs default to Relative Colorimetric with BPC; existing saved choices are retained.
 
-A printer profile may not implement every intent. ICCPrint checks whether the selected output profile reports support for the chosen intent.
+Black Point Compensation maps source/destination black points to help retain shadow gradation. It is commonly used with Relative Colorimetric but is not an accuracy guarantee. Compare the actual profile/output condition rather than assuming one intent works best for every image.
 
-## Black Point Compensation
+## Source/proof comparison
 
-BPC remaps the source black point to the destination black point to preserve more usable shadow gradation when source and printer black points differ. It is commonly paired with Relative Colorimetric, but ICCPrint allows it with the other intents so users can compare actual output.
+Source mode converts the source to sRGB for display. Proof mode uses the printer profile in a LittleCMS proofing transform, then converts the simulation back to sRGB. Changing preview settings is asynchronous and stale results are discarded.
 
-## Soft proofing
+The application does not automatically retrieve/apply the current monitor ICC profile. A soft proof cannot validate driver configuration, ink, paper, physical margins, or measured color accuracy. Calibrated display/viewing conditions and physical test prints remain necessary. The preview is also resolution-bounded, so it is not a full-resolution pixel inspection tool.
 
-The preview uses the selected printer profile as a proofing profile and converts the simulated result back to sRGB for display. This is useful for comparing settings, but it is not a substitute for a calibrated monitor and controlled viewing conditions.
+## The print condition is part of the profile
 
-## Profile validity depends on the print condition
+Keep these consistent with profile creation:
 
-A printer ICC profile is only valid for the print condition used to create it. Keep the following consistent:
+- Printer and ink set
+- Physical paper and driver media type
+- Quality/resolution
+- High-speed/bidirectional and other settings affecting ink laydown
+- Driver color-correction mode
 
-- printer
-- ink set
-- paper
-- media type selected in the driver
-- print quality / resolution
-- relevant high-speed or bidirectional options
-- any other driver setting that changes ink laydown
+Named application presets do not control these private driver settings. Driver acknowledgment is never automatically restored from a preset.

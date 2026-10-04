@@ -1,32 +1,85 @@
 name: Build Windows artifact
 
+# Build verification only. Never creates a release, tag, or deployment.
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "iccprint/**"
+      - "scripts/**"
+      - "tests/**"
+      - "docs/**"
+      - "README*"
+      - "START_HERE.txt"
+      - "THIRD_PARTY_NOTICES.md"
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - "build_exe.bat"
+      - ".github/workflows/build-windows.yml"
   push:
-    tags:
-      - "v*"
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          architecture: x64
           cache: pip
-      - name: Create build environment
-        shell: powershell
-        run: |
-          python -m venv .venv
-          .\.venv\Scripts\python.exe -m pip install --upgrade pip
-      - name: Build with PyInstaller
+          cache-dependency-path: |
+            requirements*.txt
+            pyproject.toml
+      - name: Clean build, test, bundle validation and checksum
         shell: cmd
         run: build_exe.bat /nopause
-      - name: Create zip
-        shell: powershell
-        run: Compress-Archive -Path dist\ICCPrint\* -DestinationPath ICCPrint-Windows.zip
+      - name: Verify archive checksum and contents after extraction
+        shell: pwsh
+        run: |
+          $archives = @(Get-ChildItem dist/ICCPrint-*-Windows-x64.zip)
+          if ($archives.Count -ne 1) { throw 'Expected exactly one distribution archive' }
+          $zip = $archives[0]
+          $expected = (Get-Content "$($zip.FullName).sha256").Split(' ')[0]
+          if ((Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower() -ne $expected) {
+            throw 'Archive checksum mismatch'
+          }
+          Expand-Archive $zip.FullName -DestinationPath build/archive-check
+          python -c "from pathlib import Path; from scripts.package_distribution import validate_distribution, verify_manifest; p=Path('build/archive-check/ICCPrint'); validate_distribution(p); verify_manifest(p)"
+          $report = Join-Path $PWD 'build/extracted-smoke-test.json'
+          $process = Start-Process -FilePath 'build/archive-check/ICCPrint/ICCPrint.exe' -ArgumentList @('--smoke-test', ('"' + $report + '"')) -PassThru
+          if (-not $process.WaitForExit(90000)) { $process.Kill(); throw 'Extracted smoke test timed out' }
+          if ($process.ExitCode -ne 0) { throw 'Extracted executable failed' }
+          $result = Get-Content $report | ConvertFrom-Json
+          if (-not $result.ok -or -not $result.frozen) { throw 'Missing frozen smoke success' }
       - uses: actions/upload-artifact@v4
         with:
-          name: ICCPrint-Windows
-          path: ICCPrint-Windows.zip
+          name: ICCPrint-Windows-x64-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/ICCPrint-*-Windows-x64.zip
+            dist/ICCPrint-*-Windows-x64.zip.sha256
+            dist/ICCPrint/BUILD_MANIFEST.json
+            build/windows/frozen-smoke-test.json
+            build/extracted-smoke-test.json
+      - name: Preserve build diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ICCPrint-build-diagnostics-${{ github.sha }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/windows/pyinstaller/ICCPrint/warn-ICCPrint.txt
+            build/windows/frozen-smoke-test.json
+            build/extracted-smoke-test.json

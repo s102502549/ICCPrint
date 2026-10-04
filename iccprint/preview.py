@@ -14,7 +14,7 @@ class PrintPreviewWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMinimumSize(360, 430)
+        self.setMinimumSize(320, 280)
         self._image: Optional[QImage] = None
         self._paper_w_mm = 210.0
         self._paper_h_mm = 297.0

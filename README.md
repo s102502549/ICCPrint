@@ -1,132 +1,101 @@
 # ICCPrint
 
-[繁體中文 README](README_zh-TW.md)
+[繁體中文](README_zh-TW.md)
 
-ICCPrint is a free, open-source Windows utility for **ICC-managed printing without Photoshop**. It applies a printer ICC/ICM profile with an explicit rendering intent, provides a soft-proof preview, and then hands the converted output to the normal Windows printer driver.
+ICCPrint is a local Windows utility for **ICC-managed printing without Photoshop**. It converts documents to an RGB printer profile with an explicit rendering intent, provides a source/soft-proof comparison, and submits output through the Windows printer driver. The interface is primarily Traditional Chinese.
 
-> **Project status:** alpha. The workflow has been developed and tested around an Epson L15160 + Datacolor/SpyderPRINT RGB printer profile. Other Windows printers with RGB output profiles may work, but driver-specific behavior is not guaranteed.
+**0.3.0 is a development build.** Automated tests exercise color validation, rendering, layout, job preparation and packaging. They do not certify a printer or color accuracy. Epson L15160 with a Datacolor/SpyderPRINT RGB profile is the project's original reference workflow; this version still requires recorded Windows, driver and physical-print acceptance before a public release.
 
-## Why ICCPrint?
+## Start here
 
-Many consumer and office printer drivers expose an ICM mode but do not let the user choose the ICC rendering intent. ICCPrint performs the color conversion itself with Pillow/LittleCMS, so you can explicitly choose:
+### Portable Windows package
 
-- Perceptual
-- Relative Colorimetric
-- Saturation
-- Absolute Colorimetric
-- Optional Black Point Compensation (BPC)
+Extract the entire versioned ZIP and double-click `ICCPrint/ICCPrint.exe`. **No Python installation is needed.** Keep `_internal` with the executable. Read [Windows installation](docs/INSTALL_WINDOWS.md) and [the first-print guide](docs/USER_GUIDE.md).
 
-The printer driver should then be configured to **disable additional color correction** (for Epson drivers, typically `No Color Adjustment`) to avoid double color management.
+The repository does not contain a prebuilt EXE. The Windows artifact workflow builds a downloadable test artifact on demand or for qualifying pull requests; it does not publish releases.
 
-## Features
+### Source checkout
 
-- PDF, JPEG, PNG, TIFF (including multipage), BMP, and WebP
-- Optional Word/Excel/PowerPoint support through an installed LibreOffice conversion step
-- RGB printer ICC/ICM profiles
-- Four ICC rendering intents
-- Black Point Compensation
-- ICC soft-proof preview
-- Fit / Fill / Actual 100% layout modes
-- Embedded image DPI handling with a configurable fallback DPI
-- Common paper sizes plus custom millimeter sizes
-- Portrait / landscape orientation
-- Multipage preview navigation
-- Native Windows print dialog and printer-driver properties
-- Local processing only; documents are not uploaded
-
-## Important color-management rule
-
-ICCPrint already converts the source image/document into the selected printer profile. **Do not enable a second color-management pass in the printer driver.**
-
-For an Epson workflow, the usual driver path is similar to:
-
-`Printer Properties -> More Options -> Color Correction -> Custom -> Advanced -> No Color Adjustment`
-
-Also use the same media type, quality, ink, paper, and other driver settings that were used when the printer ICC profile was created.
-
-## Quick start on Windows
-
-Requirements:
-
-- Windows 10 or 11
-- 64-bit Python 3.12 or 3.13
-- A printer ICC/ICM profile
-- Optional: LibreOffice for Office-document conversion
-
-Clone or download the repository, then run:
+Use x64 Windows 10/11 and Python 3.12 or 3.13:
 
 ```bat
 install_and_run.bat
 ```
 
-After the first setup, `run.bat` starts ICCPrint using the local virtual environment.
-
-You can also use standard Python commands:
+After setup, launch with `run.bat`. Or install manually:
 
 ```powershell
-python -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m iccprint
 ```
 
-## Build a Windows executable
+The tested dependency set is pinned in `requirements-lock.txt`. A manufacturer printer driver and suitable RGB output ICC/ICM are required for printing. LibreOffice is optional for Office conversion and is not bundled.
 
-Run:
+## Workflow
+
+1. Add images, PDFs or supported Office documents. Import/conversion runs in the background.
+2. Choose the profile for the exact **printer, ink and paper**. ICCPrint validates RGB output-device profiles and their supported intent.
+3. Choose paper, orientation and Fit / Fill / Actual. Compare the color-managed source preview with ICC soft proof; review resolution/cropping warnings.
+4. Select intent and BPC. New installations default to Relative Colorimetric with Black Point Compensation. Named local presets save repeatable application settings.
+5. In the printer driver's own properties, **disable additional color correction** and match the profiled media/quality settings. Confirm the checkbox each session; it is never restored from a preset.
+6. Review preflight and the native print dialog. Selected pages are fully rendered and color-converted to a temporary disk spool before the printer job begins. Start with a single physical test page.
+
+For Epson, the driver path is often similar to `Printer Properties → More Options → Color Correction → Custom → Advanced → No Color Adjustment`; names vary by driver. ICCPrint cannot enforce this vendor-specific setting.
+
+## Features
+
+- PDF, JPEG, PNG, multipage TIFF, BMP and WebP; optional Word/Excel/PowerPoint via LibreOffice
+- Strict source ICC validation, white transparency compositing, and explicit sRGB assumptions for untagged RGB content
+- RGB **printer output** ICC/ICM validation; monitor/sRGB and CMYK output profiles are rejected
+- Perceptual, Relative Colorimetric, Saturation and Absolute Colorimetric intents; optional BPC
+- Background preview/import/job preparation, stale-result suppression, queue reordering, direct page navigation and source/proof toggle
+- Fit, Fill and Actual 100%; embedded image DPI with configurable fallback; standard/custom paper and orientation
+- Named local application presets; preflight readiness and layout/resolution warnings
+- Complete pre-render before submission, bounded raster allocation, temporary-job cleanup and cooperative cancellation
+- Native Windows dialog, selected page ranges, and printer copy/collation handling
+- Versioned portable ZIP, executable metadata, dependency notices, file manifest and SHA-256 checksum
+- Local document processing; no document-upload service
+
+## Color and size boundaries
+
+- **Fit** shows the whole source; **Fill** intentionally crops; **Actual** preserves physical dimensions and can extend beyond the sheet. Images use embedded or fallback DPI. PDFs use their physical page dimensions independently of rasterization DPI.
+- PDFium rasterizes PDFs before output, so vector/text content becomes pixels. The rendered bitmap is treated as sRGB; this is not a vector-preserving prepress/RIP workflow.
+- Proofing simulates the selected printer profile back to sRGB. The app does not automatically use your monitor ICC profile or provide calibrated-display guarantees.
+- Preview and output share a full-paper coordinate system. Hardware margins can still clip output; this is not a promise of borderless printing.
+- Driver settings and the actual profiling condition remain the user's responsibility. Cancellation cannot retract pages already submitted; “submitted” does not mean physically printed.
+- Current raster safeguards are 100 million pixels and 32,768 pixels on either axis. Oversized pages are rejected with guidance rather than allocated without limits.
+
+## Build and verify
+
+On native x64 Windows with Python 3.12 or 3.13:
 
 ```bat
 build_exe.bat
 ```
 
-The PyInstaller folder build is written to:
+This recreates an isolated build environment, installs pinned dependencies, runs tests, builds and smoke-tests the EXE, collects documentation/notices, and writes:
 
 ```text
-dist\ICCPrint\ICCPrint.exe
+dist/ICCPrint/ICCPrint.exe
+dist/ICCPrint/BUILD_MANIFEST.json
+dist/ICCPrint-0.3.0-Windows-x64.zip
+dist/ICCPrint-0.3.0-Windows-x64.zip.sha256
 ```
 
-The repository also contains a GitHub Actions workflow that can build a Windows artifact on demand.
-
-## Fit, Fill, and Actual
-
-- **Fit** keeps the whole source visible and scales it to fit inside the paper.
-- **Fill** fills the paper and crops the source symmetrically when needed.
-- **Actual 100%** preserves physical size. PDF pages use their PDF page dimensions; raster images use embedded DPI, or the user-defined fallback DPI if no DPI is present.
-
-## Soft proofing
-
-ICCPrint uses LittleCMS proofing transforms to simulate the selected printer profile on an sRGB display preview. This is useful for comparing profiles, rendering intents, BPC, crop/layout, and paper orientation.
-
-A soft proof is still an approximation. Monitor calibration, screen brightness, ambient light, paper white, ink, drying time, and the actual printer-driver configuration all affect the physical result.
-
-## Limitations
-
-- Windows only at the moment.
-- Printer profiles must currently use an RGB device color space.
-- PDF pages are rasterized before ICC conversion. Text/vector content therefore becomes pixels for output.
-- ICCPrint cannot reliably force vendor-specific driver settings such as Epson's `No Color Adjustment`; you must confirm those settings in the driver's own properties dialog.
-- The preview represents the full paper rectangle; non-printable margins are still controlled by the printer driver.
+CI runs headless tests on Ubuntu and Windows with Python 3.12/3.13. The Windows build workflow also verifies the extracted archive. These checks do not exercise a physical printer. See [reproducibility boundaries](docs/INSTALL_WINDOWS.md#reproducibility-boundary) and the [release checklist](docs/RELEASE_CHECKLIST.md).
 
 ## Documentation
 
-- [Windows installation](docs/INSTALL_WINDOWS.md)
-- [Color-management workflow](docs/COLOR_MANAGEMENT.md)
-- [Project architecture](docs/ARCHITECTURE.md)
-- [Contributing](CONTRIBUTING.md)
-- [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [User guide](docs/USER_GUIDE.md)
+- [Windows installation and building](docs/INSTALL_WINDOWS.md)
+- [Color-management pipeline](docs/COLOR_MANAGEMENT.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing and tests](CONTRIBUTING.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md) and [dependency sources](docs/DEPENDENCY_SOURCES.md)
+- [Changelog](CHANGELOG.md)
 
-## Development
+## License and trademarks
 
-Run the test suite with:
-
-```powershell
-python -m unittest discover -s tests -v
-```
-
-A basic CI workflow runs compilation and unit tests on Windows with supported Python versions.
-
-## License
-
-ICCPrint source code is released under the [MIT License](LICENSE). Dependencies retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Trademark notice
-
-Epson, Datacolor, SpyderPRINT, Adobe, Windows, and other product names are trademarks of their respective owners. ICCPrint is an independent open-source project and is not affiliated with or endorsed by those companies.
+ICCPrint source is [MIT-licensed](LICENSE). Dependencies retain their own licenses; binary redistribution requires the review described in the notices. Epson, Datacolor, SpyderPRINT, Adobe, Windows and other product names are trademarks of their respective owners. This independent project is not affiliated with or endorsed by those companies.

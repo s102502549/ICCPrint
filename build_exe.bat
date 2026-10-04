@@ -3,40 +3,33 @@ setlocal
 cd /d "%~dp0"
 set "NO_PAUSE=0"
 if /I "%~1"=="/nopause" set "NO_PAUSE=1"
-
-if not exist ".venv\Scripts\python.exe" (
-    echo Run install_and_run.bat first to create the environment.
+set "PY_CMD="
+where py >nul 2>&1
+if not errorlevel 1 (
+    py -3.12 -c "import sys" >nul 2>&1
+    if not errorlevel 1 set "PY_CMD=py -3.12"
+)
+if not defined PY_CMD (
+    where py >nul 2>&1
+    if not errorlevel 1 (
+        py -3.13 -c "import sys" >nul 2>&1
+        if not errorlevel 1 set "PY_CMD=py -3.13"
+    )
+)
+if not defined PY_CMD (
+    where python >nul 2>&1
+    if not errorlevel 1 set "PY_CMD=python"
+)
+if not defined PY_CMD (
+    echo Install x64 Python 3.12 or 3.13 from python.org, then try again.
     goto :error
 )
-
-call ".venv\Scripts\activate.bat"
+%PY_CMD% scripts\build_windows.py
 if errorlevel 1 goto :error
-python -m pip install -r requirements-build.txt
-if errorlevel 1 goto :error
-
-rmdir /s /q build 2>nul
-rmdir /s /q dist\ICCPrint 2>nul
-
-echo Building Windows executable folder...
-python -m PyInstaller --noconfirm --clean --windowed --onedir ^
-  --name ICCPrint ^
-  --collect-all pypdfium2 ^
-  --hidden-import PySide6.QtPrintSupport ^
-  main.py
-if errorlevel 1 goto :error
-
-copy /y README.md "dist\ICCPrint\README.md" >nul
-copy /y README_zh-TW.md "dist\ICCPrint\README_zh-TW.md" >nul
-copy /y THIRD_PARTY_NOTICES.md "dist\ICCPrint\THIRD_PARTY_NOTICES.md" >nul
-copy /y LICENSE "dist\ICCPrint\LICENSE" >nul
-python scripts\collect_licenses.py "dist\ICCPrint\third_party_licenses"
-if errorlevel 1 goto :error
-
 echo.
-echo Done: dist\ICCPrint\ICCPrint.exe
+echo Done. Open dist\ICCPrint\START_HERE.txt for first-run instructions.
 if "%NO_PAUSE%"=="0" pause
 exit /b 0
-
 :error
 echo.
 echo Build failed. Keep the error messages shown above.

@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=75", "wheel"]
+requires = ["setuptools==84.0.0", "wheel==0.48.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "iccprint"
-version = "0.2.0"
+dynamic = ["version"]
 description = "A Windows ICC-managed printing utility with soft proofing and explicit rendering intents."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 license = { file = "LICENSE" }
 authors = [
   { name = "ICCPrint contributors" }
@@ -33,10 +33,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-build = ["pyinstaller>=6.10,<7"]
+build = ["pyinstaller==6.22.3"]
 
-[project.scripts]
+[project.gui-scripts]
 iccprint = "iccprint.__main__:main"
 
 [tool.setuptools]
 packages = ["iccprint"]
+
+[tool.setuptools.dynamic]
+version = {attr = "iccprint.__version__"}

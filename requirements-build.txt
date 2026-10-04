@@ -1,2 +1,10 @@
 -r requirements.txt
-pyinstaller>=6.10,<7
+# Pin all Windows packaging dependencies, including transitive build tools.
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.8
+altgraph==0.17.5
+packaging==26.3
+setuptools==84.0.0
+wheel==0.48.0
+pefile==2024.8.26; sys_platform == "win32"
+pywin32-ctypes==0.2.3; sys_platform == "win32"

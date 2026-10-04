@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Optional
 
@@ -60,8 +61,14 @@ def layout_rects(
     represented by page_width/page_height (e.g. mm for preview, device pixels
     for printing after converting the physical size to printer pixels).
     """
-    if page_width <= 0 or page_height <= 0 or image_width <= 0 or image_height <= 0:
-        return LayoutRects(0, 0, max(page_width, 0), max(page_height, 0), 0, 0, max(image_width, 0), max(image_height, 0))
+    if not all(math.isfinite(value) and value > 0 for value in
+               (page_width, page_height, image_width, image_height)):
+        raise ValueError("紙張與圖片尺寸必須是大於零的有限值。")
+    if mode not in {"fit", "fill", "actual"}:
+        raise ValueError(f"不支援的版面模式：{mode}")
+    if mode == "actual" and any(value is not None and not math.isfinite(value)
+                                 for value in (actual_width, actual_height)):
+        raise ValueError("原始實體尺寸必須是有限值。")
 
     if mode == "actual":
         if not actual_width or not actual_height or actual_width <= 0 or actual_height <= 0:

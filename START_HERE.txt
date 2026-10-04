@@ -1,18 +1,28 @@
-ICCPrint
-========
+ICCPrint 0.3 - start here
+========================
 
-GitHub / source quick start:
+PORTABLE WINDOWS PACKAGE (no Python installation needed)
+1. Extract the entire ZIP to a folder you can write to.
+2. Keep ICCPrint.exe and its _internal folder together.
+3. Double-click ICCPrint.exe. Do not run it from inside the ZIP.
+4. Add a document, select an RGB printer ICC/ICM, and inspect the preview.
+5. Match the paper, ink, media and quality settings used to create the ICC.
+6. Disable extra color correction in the printer driver's own properties.
+7. Review preflight and print one test page before a longer job.
 
-1. Windows 10/11 + 64-bit Python 3.12 or 3.13.
-2. Run install_and_run.bat.
-3. Select an RGB printer ICC/ICM profile.
-4. In the printer driver's own properties, disable extra color correction.
-5. Use the same paper/media/quality settings that were used to create the ICC profile.
+SOURCE CHECKOUT
+Windows x64 + Python 3.12 or 3.13: run install_and_run.bat.
+After setup, use run.bat. To create a portable package, run build_exe.bat.
 
-Documentation:
-- README.md
-- README_zh-TW.md
-- docs\INSTALL_WINDOWS.md
-- docs\COLOR_MANAGEMENT.md
+DOCUMENTATION
+README.md / README_zh-TW.md: overview and source quick start
+ docs\INSTALL_WINDOWS.md: portable package, source setup and building
+ docs\USER_GUIDE.md: document, profile, paper and printing workflow
+ docs\COLOR_MANAGEMENT.md: color pipeline and proof limitations
+ docs\TROUBLESHOOTING.md: launch, profiles, large files and printing
+ THIRD_PARTY_NOTICES.md / third_party_licenses: dependency notices
 
-To build the Windows folder distribution, run build_exe.bat.
+The preview cannot validate your physical printer or driver settings.
+No administrator access is required by ICCPrint itself. Printer-driver
+installation may require it. This package is unsigned unless its distributor
+explicitly documents signing. Never bypass a security warning automatically.
