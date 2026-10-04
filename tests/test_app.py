@@ -34,6 +34,12 @@ class WindowTests(unittest.TestCase):
         self.settings = QSettings(str(self.root / "settings.ini"), QSettings.Format.IniFormat)
         self.settings_patch = patch("iccprint.app.QSettings", return_value=self.settings)
         self.settings_patch.start()
+        # Never load the runner's real Windows printer/monitor profiles.
+        self.color_dir = self.root / "installed-profiles"
+        self.color_dir.mkdir()
+        color_dir_patch = patch.object(MainWindow, "windows_color_dir", return_value=self.color_dir)
+        color_dir_patch.start()
+        self.addCleanup(color_dir_patch.stop)
         self.dialog_patches = []
         for method in ("critical", "warning", "information"):
             p = patch(f"iccprint.app.QMessageBox.{method}")
@@ -129,6 +135,17 @@ class WindowTests(unittest.TestCase):
         self.window._restore_settings()
         self.assertFalse(self.window.no_color_adjust_check.isChecked())
         self.assertFalse(self.window.print_btn.isEnabled())
+
+    def test_installed_profile_scan_is_isolated_to_test_directory(self):
+        self.assertEqual(self.window.windows_color_dir(), self.color_dir)
+        self.assertEqual(self.window.profile_combo.count(), 1)
+        self.assertIsNone(self.window.profile_combo.itemData(0))
+        unrelated = self.profile("outside-scan.icc")
+        fixture = self.profile("installed-profiles/synthetic-printer.icc")
+        self.window._refresh_installed_profiles()
+        self.assertEqual(self.window.profile_combo.count(), 2)
+        self.assertEqual(self.window.profile_combo.itemData(1), str(fixture))
+        self.assertEqual(self.window.profile_combo.findData(str(unrelated)), -1)
 
     def test_preflight_requires_output_profile_and_confirmation(self):
         self.add_document()

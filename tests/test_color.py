@@ -9,6 +9,7 @@ from PIL import Image, ImageCms
 
 from iccprint.color import (
     _source_profile_and_image,
+    _profile_from_path,
     convert_to_printer_rgb,
     read_profile_info,
     softproof_to_srgb,
@@ -35,6 +36,22 @@ class ColorPipelineTests(unittest.TestCase):
         image = Image.new(mode, (2, 2), color)
         self.addCleanup(image.close)
         return image
+
+    def test_live_profile_does_not_lock_its_file(self):
+        profile = _profile_from_path(self.printer_path)
+        self.printer_path.unlink()  # Must succeed on Windows while profile is alive.
+        self.assertEqual(profile.profile.device_class, "prtr")
+        self.assertEqual(ImageCms.isIntentSupported(profile, self.intent, ImageCms.Direction.OUTPUT), 1)
+
+    def test_transform_retained_by_mock_does_not_lock_profile_file(self):
+        # A retained call argument models tracebacks/Qt tasks holding profile
+        # references after failure. Cleanup must not depend on garbage collection.
+        with patch("iccprint.color.ImageCms.profileToProfile", side_effect=RuntimeError("failed")) as transform:
+            with self.assertRaises(RuntimeError):
+                convert_to_printer_rgb(self.image(), self.printer_path, self.intent, False)
+            retained_profile = transform.call_args.args[2]
+            self.printer_path.unlink()
+            self.assertEqual(retained_profile.profile.device_class, "prtr")
 
     def test_profile_inspection_does_not_claim_display_profile_is_printer(self):
         self.assertEqual(read_profile_info(self.display_path).device_class, "mntr")

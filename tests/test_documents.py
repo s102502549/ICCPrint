@@ -269,11 +269,11 @@ class OfficeConversionTests(unittest.TestCase):
             profiles = list(self.output.glob("lo_profile_*"))
             self.assertEqual(len(profiles), 1)
             self.assertTrue(profiles[0].is_dir())
-            self.assertIn(f"-env:UserInstallation={profiles[0].as_uri()}", command)
+            self.assertIn(f"-env:UserInstallation={profiles[0].resolve().as_uri()}", command)
             self.expected.write_bytes(b"%PDF-test")
             return SimpleNamespace(returncode=0, stdout="converted", stderr="")
         with patch("iccprint.documents.subprocess.run", side_effect=convert):
-            self.assertEqual(convert_office_to_pdf(self.source, self.output), self.expected)
+            self.assertEqual(convert_office_to_pdf(self.source, self.output), self.expected.resolve())
         self.assertEqual(list(self.output.glob("lo_profile_*")), [])
         self.assertEqual(observed["kwargs"]["timeout"], 120)
         self.assertIn(str(self.source.resolve()), observed["command"])

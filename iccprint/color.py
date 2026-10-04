@@ -46,10 +46,22 @@ def _profile_info(path: Path, profile: ImageCms.ImageCmsProfile) -> ProfileInfo:
     )
 
 
+def _profile_from_path(path: str | Path) -> ImageCms.ImageCmsProfile:
+    """Load an owned memory profile without a Windows file handle.
+
+    LittleCMS may keep a filename-backed ICC open for its entire lifetime.
+    Tracebacks/transforms can prolong that lifetime after a failed operation,
+    preventing temporary job directories from being removed on Windows.
+    """
+    with Path(path).open("rb") as source:
+        data = source.read()
+    return ImageCms.getOpenProfile(BytesIO(data))
+
+
 def read_profile_info(path: str | Path) -> ProfileInfo:
     """Inspect an ICC profile without implying that it is a printer profile."""
     path = Path(path)
-    return _profile_info(path, ImageCms.getOpenProfile(str(path)))
+    return _profile_info(path, _profile_from_path(path))
 
 
 def _open_printer_profile(
@@ -59,7 +71,7 @@ def _open_printer_profile(
     allow_non_printer_profile: bool = False,
 ) -> ImageCms.ImageCmsProfile:
     try:
-        profile = ImageCms.getOpenProfile(str(path))
+        profile = _profile_from_path(path)
     except (ImageCms.PyCMSError, OSError, TypeError, ValueError) as exc:
         raise ValueError("無法讀取印表機 ICC 描述檔，請選擇有效的 ICC / ICM 檔案。") from exc
     space = _strip_icc_text(getattr(profile.profile, "xcolor_space", "")).upper()

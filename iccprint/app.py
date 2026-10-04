@@ -5,7 +5,6 @@ import tempfile
 import json
 from pathlib import Path
 
-from PIL import ImageCms
 from PySide6.QtCore import QSettings, QSizeF, QTimer, Qt, QThreadPool
 from PySide6.QtGui import QAction, QPageLayout, QPageSize, QPainter, QImage, QKeySequence
 from PySide6.QtPrintSupport import QAbstractPrintDialog, QPrintDialog, QPrinter
@@ -622,10 +621,8 @@ class MainWindow(QMainWindow):
         try:
             intent = INTENTS[self.intent_combo.currentText()]
             info = validate_printer_profile(path, intent)
-            profile = ImageCms.getOpenProfile(path)
-            supported = ImageCms.isIntentSupported(profile, intent, ImageCms.Direction.OUTPUT) == 1
-            if info.color_space.strip().upper() != "RGB":
-                raise ValueError(f"ICCPrint 目前只輸出 RGB 印表機描述檔；此檔是 {info.color_space}。")
+            # validate_printer_profile already checks the selected intent.
+            supported = self.intent_combo.currentText() in info.supported_intents
             QMessageBox.information(
                 self,
                 "ICC 檢查",
